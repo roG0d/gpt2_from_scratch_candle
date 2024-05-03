@@ -41,7 +41,7 @@ fn main() -> Result<()> {
     // Bigram loss function
     // vocab_size = n of unique tokens
     let bigram_model = Bigram::new(91).unwrap();
-    let (logits, loss) = bigram_model.forward(&x, Some(&y));
+    let (_logits, loss) = bigram_model.forward(&x, Some(&y));
     println!("loss: {:?}", loss); 
     bigram_model.generate(&x,1);
      

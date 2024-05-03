@@ -5,6 +5,18 @@ use candle_nn::{embedding, loss::cross_entropy, Embedding, Module, VarBuilder, V
 use rand::{thread_rng, Error};
 use ndarray::{s, Array};
 
+/*
+const BATCH_SIZE: usize = 21;  // usize for non-negative sequence counts
+const BLOCK_SIZE: usize = 85;  // usize for context lengths
+const MAX_ITERS: usize = 5000; // usize for iteration counts
+const EVAL_INTERVAL: usize = 500; // usize for intervals
+const LEARNING_RATE: f32 = 3e-4; // f32 for floating-point precision
+const EVAL_ITERS: usize = 200; // usize for iteration counts
+const N_EMBD: usize = 128;  // usize for embedding dimensions
+const N_HEAD: usize = 6;    // usize for attention heads
+const N_LAYER: usize = 6;   // usize for layer counts
+const DROPOUT: f32 = 0.2;   // f32 for dropout probability
+ */
 
 const DEBUG:bool = true;
 /* Credits to: https://github.com/huggingface/candle/issues/406 */
@@ -53,24 +65,29 @@ impl Bigram {
 
     pub fn generate(&self, idx: &Tensor, max_new_tokens: usize){
 
-        for _ in 0.. max_new_tokens{
+        for i in 0.. max_new_tokens{
             let (logits, _) = self.forward(idx, None);
-            println!("{:?}", logits.shape());
+            if DEBUG {println!("logits shape: {:?}", logits.shape());}
+            
 
-            // Logits is already (B, C) wtf karthapy https://youtu.be/kCc8FmEb1nY?t=1826 CAREFUL
+
+            // Logits is already (B, C) wtf karpathy https://youtu.be/kCc8FmEb1nY?t=1826 CAREFUL
             //let slice = 
             //let array_logits = slice.slice(s![.., -1, ..]).to_owned();
             //let array_logits = logits.i(index)
+            
             let probs = softmax(&logits, 1).unwrap();
-
-            // sample_multinomial not implemented in candle -> https://github.com/jeroenvlek/gpt-from-scratch-rs/blob/main/src/sampling.rs
-            let idx_next = sample_multinomial(&idx.to_vec1().unwrap());
-
-                                                                // to_vec2 cause 2 dimensions
+            let probs_dim1 = probs.to_vec1().unwrap();
+            if DEBUG {println!("probs tensor: {:?}", probs);}
+            if DEBUG {println!("probs_dim1 tensor: {:?}", probs_dim1);}
+            
+            
+            let idx_next = sample_multinomial(&probs_dim1);
         }
     }
 }
 
+// sample_multinomial not implemented in candle -> https://github.com/jeroenvlek/gpt-from-scratch-rs/blob/main/src/sampling.rs
 use rand::distributions::Distribution;
 pub fn sample_multinomial(logits: &Vec<f32>) -> candle_core::Result<u32> {
     let mut rng = thread_rng();
