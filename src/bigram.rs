@@ -19,19 +19,22 @@ const DROPOUT: f32 = 0.2;   // f32 for dropout probability
  */
 
 const DEBUG:bool = true;
-/* Credits to: https://github.com/huggingface/candle/issues/406 */
+static DEVICE: &Device = &Device::Cpu; // CPU Device
+// static DEVICE: &Device = &Device::new_cuda(0).unwrap(); // GPU Device
+
 
 #[derive(Debug)]
 pub struct Bigram {
     token_emmbeding_table: Embedding,
 }
 
+/* Credits to: https://github.com/huggingface/candle/issues/406 */
 impl Bigram {
     // Equivalent to init in python torch:
     pub fn new(vocab_size: usize) -> Result<Self, Error> {
 
         // VarBuilder initializes weights for a model:
-        let vb = VarBuilder::from_varmap(&VarMap::new(), DType::F32, &Device::new_cuda(0).unwrap());
+        let vb = VarBuilder::from_varmap(&VarMap::new(), DType::F32, DEVICE);
         let token_embedding_table = embedding(vocab_size, vocab_size, vb).unwrap();
         
         Ok(Bigram {
@@ -51,14 +54,11 @@ impl Bigram {
         // Optional targets inside Some()
         if let Some(targets) = targets{
             let targets = targets.reshape(&shape[0]*shape[1]).unwrap(); // Dimension = (B*T)
-
-            if DEBUG {println!("logits shape: {:?}", logits.shape());}
-            if DEBUG {println!("targets shape: {:?}", targets.shape());}
             
             loss = cross_entropy(&logits, &targets).unwrap();
             
         }else{
-            loss = Tensor::zeros((1,1), DType::F32, &Device::new_cuda(0).unwrap()).unwrap();
+            loss = Tensor::zeros((1,1), DType::F32, DEVICE).unwrap();
         }
         (logits, loss)
     }
@@ -66,23 +66,16 @@ impl Bigram {
     pub fn generate(&self, idx: &Tensor, max_new_tokens: usize){
 
         for i in 0.. max_new_tokens{
-            let (logits, _) = self.forward(idx, None);
-            if DEBUG {println!("logits shape: {:?}", logits.shape());}
-            
-
+            let (logits, _) = self.forward(idx, None); // (B*T,C)
 
             // Logits is already (B, C) wtf karpathy https://youtu.be/kCc8FmEb1nY?t=1826 CAREFUL
             //let slice = 
             //let array_logits = slice.slice(s![.., -1, ..]).to_owned();
             //let array_logits = logits.i(index)
-            
+
             let probs = softmax(&logits, 1).unwrap();
-            let probs_dim1 = probs.to_vec1().unwrap();
-            if DEBUG {println!("probs tensor: {:?}", probs);}
-            if DEBUG {println!("probs_dim1 tensor: {:?}", probs_dim1);}
-            
-            
-            let idx_next = sample_multinomial(&probs_dim1);
+            let probs_dim2 = probs.to_vec2::<f32>().unwrap();
+            //let idx_next = sample_multinomial(&probs_dim2);
         }
     }
 }

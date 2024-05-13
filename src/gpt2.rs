@@ -17,6 +17,11 @@ const N_HEAD: usize = 6;    // usize for attention heads
 const N_LAYER: usize = 6;   // usize for layer counts
 const DROPOUT: f32 = 0.2;   // f32 for dropout probability
 
+
+static DEVICE: &Device = &Device::Cpu; // CPU Device
+// static DEVICE: &Device = &Device::new_cuda(0).unwrap(); // GPU Device
+
+
 pub fn load_data() -> (Tensor, Tensor){
 
     let text = fs::read_to_string("./assets/input.txt").unwrap();
@@ -51,8 +56,8 @@ pub fn load_data() -> (Tensor, Tensor){
     let len_train = sliced_data[0].len();
     let len_val = sliced_data[1].len();
     // GPU Tensors
-    let train_data = Tensor::from_vec(sliced_data.iter().nth(0).unwrap().to_vec(), len_train, &Device::new_cuda(0).unwrap()).unwrap();
-    let val_data = Tensor::from_vec(sliced_data.iter().nth(1).unwrap().to_vec(), len_val, &Device::new_cuda(0).unwrap()).unwrap();
+    let train_data = Tensor::from_vec(sliced_data.iter().nth(0).unwrap().to_vec(), len_train, DEVICE).unwrap();
+    let val_data = Tensor::from_vec(sliced_data.iter().nth(1).unwrap().to_vec(), len_val, DEVICE).unwrap();
     if DEBUG {println!("train data tensor: {:?}",train_data);}
     if DEBUG {println!("validation data tensor: {:?}",val_data);}
     // CPU Tensor
@@ -80,12 +85,12 @@ pub fn get_batch(split: &str, data: Tensor)-> (Tensor,Tensor){
     // OPTIMIZATION: LLMs manage different size sequences by padding -> Fuse variable lenght sequences with prepacking https://twitter.com/siyan_zhao/status/1780288750624612850
     let x: Vec<Vec<u32>> = rand_values.iter().map(|v| data_vec[*v.. *v+BLOCK_SIZE].to_vec()).collect();
     let array_x:[[u32;BLOCK_SIZE];BATCH_SIZE] = create_array(&x).unwrap();
-    let tensor_x:Tensor = Tensor::new(&array_x,  &Device::new_cuda(0).unwrap()).unwrap();
+    let tensor_x:Tensor = Tensor::new(&array_x,  DEVICE).unwrap();
 
     // Creating Y Tensor
     let y: Vec<Vec<u32>> = rand_values.iter().map(|v| data_vec[*v+1.. *v+BLOCK_SIZE+1].to_vec()).collect();
     let array_y:[[u32;BLOCK_SIZE];BATCH_SIZE] = create_array(&y).unwrap();
-    let tensor_y:Tensor = Tensor::new(&array_y,  &Device::new_cuda(0).unwrap()).unwrap();
+    let tensor_y:Tensor = Tensor::new(&array_y,  DEVICE).unwrap();
     (tensor_x, tensor_y)
 }
 
