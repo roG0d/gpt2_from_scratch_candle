@@ -1,6 +1,7 @@
-mod hello_ml;
 mod gpt2;
 mod bigram;
+mod env_runtime;
+
 use candle_core::{Device, Result, Tensor};
 
 use crate::gpt2::{get_batch, load_data};

@@ -1,5 +1,4 @@
 use std::f32::consts::E;
-
 use candle_core::{shape, DType, Device, IndexOp, NdArray, Tensor};
 use candle_nn::{embedding, loss::cross_entropy, Embedding, Module, VarBuilder, VarMap, ops::softmax};
 use rand::{thread_rng, Error};
@@ -18,27 +17,28 @@ const N_LAYER: usize = 6;   // usize for layer counts
 const DROPOUT: f32 = 0.2;   // f32 for dropout probability
  */
 
-const DEBUG:bool = true;
-static DEVICE: &Device = &Device::Cpu; // CPU Device
-// static DEVICE: &Device = &Device::new_cuda(0).unwrap(); // GPU Device
-
 
 #[derive(Debug)]
 pub struct Bigram {
     token_emmbeding_table: Embedding,
+    env_runtime: Env,
 }
 
 /* Credits to: https://github.com/huggingface/candle/issues/406 */
 impl Bigram {
     // Equivalent to init in python torch:
     pub fn new(vocab_size: usize) -> Result<Self, Error> {
+        
+        let env_runtime = Env::new();
+        println!("{}", env_runtime);
 
         // VarBuilder initializes weights for a model:
-        let vb = VarBuilder::from_varmap(&VarMap::new(), DType::F32, DEVICE);
+        let vb = VarBuilder::from_varmap(&VarMap::new(), DType::F32, &env_runtime.device);
         let token_embedding_table = embedding(vocab_size, vocab_size, vb).unwrap();
         
         Ok(Bigram {
             token_emmbeding_table: token_embedding_table,
+            env_runtime: env_runtime
         })
     }
 
@@ -58,7 +58,7 @@ impl Bigram {
             loss = cross_entropy(&logits, &targets).unwrap();
             
         }else{
-            loss = Tensor::zeros((1,1), DType::F32, DEVICE).unwrap();
+            loss = Tensor::zeros((1,1), DType::F32, &self.env_runtime.device).unwrap();
         }
         (logits, loss)
     }
@@ -67,6 +67,7 @@ impl Bigram {
 
         for i in 0.. max_new_tokens{
             let (logits, _) = self.forward(idx, None); // (B*T,C)
+            if self.env_runtime.debug {println!("logits shape: {:?}",logits.shape());}
 
             // Logits is already (B, C) wtf karpathy https://youtu.be/kCc8FmEb1nY?t=1826 CAREFUL
             //let slice = 
@@ -82,6 +83,8 @@ impl Bigram {
 
 // sample_multinomial not implemented in candle -> https://github.com/jeroenvlek/gpt-from-scratch-rs/blob/main/src/sampling.rs
 use rand::distributions::Distribution;
+
+use crate::env_runtime::Env;
 pub fn sample_multinomial(logits: &Vec<f32>) -> candle_core::Result<u32> {
     let mut rng = thread_rng();
     let distribution = rand::distributions::WeightedIndex::new(logits).unwrap();
