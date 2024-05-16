@@ -1,7 +1,7 @@
 use std::f32::consts::E;
-use candle_core::{shape, DType, Device, IndexOp, NdArray, Tensor};
+use candle_core::{shape, DType, Device, Error, IndexOp, NdArray, Tensor};
 use candle_nn::{embedding, loss::cross_entropy, Embedding, Module, VarBuilder, VarMap, ops::softmax};
-use rand::{thread_rng, Error};
+use gpt2::{sample_multinomial2d, Env};
 use ndarray::{s, Array};
 
 /*
@@ -30,7 +30,6 @@ impl Bigram {
     pub fn new(vocab_size: usize) -> Result<Self, Error> {
         
         let env_runtime = Env::new();
-        println!("{}", env_runtime);
 
         // VarBuilder initializes weights for a model:
         let vb = VarBuilder::from_varmap(&VarMap::new(), DType::F32, &env_runtime.device);
@@ -63,10 +62,10 @@ impl Bigram {
         (logits, loss)
     }
 
-    pub fn generate(&self, idx: &Tensor, max_new_tokens: usize){
+    pub fn generate(&self, mut idx: Tensor, max_new_tokens: usize)-> candle_core::Result<Tensor>{
 
         for i in 0.. max_new_tokens{
-            let (logits, _) = self.forward(idx, None); // (B*T,C)
+            let (logits, _) = self.forward(&idx, None); // (B*T,C)
             if self.env_runtime.debug {println!("logits shape: {:?}",logits.shape());}
 
             // Logits is already (B, C) wtf karpathy https://youtu.be/kCc8FmEb1nY?t=1826 CAREFUL
@@ -75,20 +74,10 @@ impl Bigram {
             //let array_logits = logits.i(index)
 
             let probs = softmax(&logits, 1).unwrap();
-            let probs_dim2 = probs.to_vec2::<f32>().unwrap();
-            //let idx_next = sample_multinomial(&probs_dim2);
+            let idx_next = sample_multinomial2d(probs, &self.env_runtime.device).unwrap();
+            idx = Tensor::cat(&[&idx,&idx_next],1).unwrap();
         }
+        Ok(idx)
     }
 }
 
-// sample_multinomial not implemented in candle -> https://github.com/jeroenvlek/gpt-from-scratch-rs/blob/main/src/sampling.rs
-use rand::distributions::Distribution;
-
-use crate::env_runtime::Env;
-pub fn sample_multinomial(logits: &Vec<f32>) -> candle_core::Result<u32> {
-    let mut rng = thread_rng();
-    let distribution = rand::distributions::WeightedIndex::new(logits).unwrap();
-    let next_token = distribution.sample(&mut rng) as u32;
-
-    Ok(next_token)
-}

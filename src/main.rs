@@ -1,6 +1,6 @@
 mod gpt2;
 mod bigram;
-mod env_runtime;
+
 
 use candle_core::{Device, Result, Tensor};
 
@@ -28,7 +28,7 @@ fn main() -> Result<()> {
     let bigram_model = Bigram::new(91).unwrap();
     //let (_logits, loss) = bigram_model.forward(&x, Some(&y));
     //println!("loss: {:?}", loss);
-    bigram_model.generate(&x,1);
-     
+    let gen = bigram_model.generate(x,1);
+    println!("gen: {:?}", gen.unwrap());
     Ok(())
 }

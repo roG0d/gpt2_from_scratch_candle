@@ -1,5 +1,5 @@
 [package]
-name = "gpt2_from_scratch_candle"
+name = "gpt2"
 version = "0.1.0"
 edition = "2021"
 

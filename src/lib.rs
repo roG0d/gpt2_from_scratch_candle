@@ -1,4 +1,4 @@
-use candle_core::Device;
+use candle_core::{Device, Tensor};
 use std::{env, fmt};
 use dotenv::dotenv;
 
@@ -38,3 +38,19 @@ impl fmt::Display for Env {
         Ok(())
     }
 }
+
+// sample_multinomial not implemented in candle -> https://github.com/jeroenvlek/gpt-from-scratch-rs/blob/main/src/sampling.rs
+use rand::{distributions::Distribution, thread_rng};
+pub fn sample_multinomial2d(logits: Tensor, device: &Device) -> candle_core::Result<Tensor> {
+    let mut rng = thread_rng();
+    let dim: usize = logits.shape().dims2().unwrap().0;
+    let mut data:Vec<u32> = Vec::with_capacity(dim);
+  
+    for i in logits.to_vec2::<f32>().unwrap(){
+      let distribution = rand::distributions::WeightedIndex::new(i).unwrap();
+      let next_token = distribution.sample(&mut rng) as u32;
+      data.push(next_token);
+    }
+  
+    Ok(Tensor::from_vec(data, (dim,1), device).unwrap())
+  }
