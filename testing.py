@@ -7,16 +7,19 @@ logits_2 = torch.tensor([[1,1,1],[2,2,2],[3,3,3]])
 print(logits_2)
 print(logits_2.shape)
 
-logits_3 = torch.tensor([[[0, 0], [1, 1]],
-                          [[0, 0], [1, 1]],
-                          [[0, 0], [1, 1]]])
+logits_3 = torch.tensor([[[1, 2], [3, 4]],
+                          [[5, 6], [7, 8]],
+                          [[9, 10], [11, 12]]])
 
 print(logits_3)
 print(logits_3.shape)
 
 # Remove the second dimension 3x2x2 -> 3x2
-slice = logits_3[:, -1, :] # becomes (B, C)
+slice = logits_3[:, 1, :] # becomes (B, C)
+slice1 = logits_3[:, -1, :] # becomes (B, C)
+
 print(slice)
+print(slice1)
 print(slice.shape)
 
 
@@ -29,3 +32,6 @@ next_idx = torch.multinomial(softmax,1)
 print(softmax)
 print(next_idx)
 
+
+logits_3 = logits_3.view(3*2,2)
+print(logits_3)

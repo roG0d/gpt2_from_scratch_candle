@@ -22,17 +22,25 @@ fn main(){
     let d1_tensor: Tensor = Tensor::new(&d1, &env_runtime.device).unwrap();
     //println!("dim1 tensor: {:?}", d1_tensor.to_vec1::<u32>().unwrap());
     
-    // Basic GETs operations
+    // Tensor creation
     let d2: [[f32; 3]; 3] = [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]];
     let d2_tensor = Tensor::new(&d2, &env_runtime.device).unwrap();
+
+    let d3_data: Vec<f32> = (1..=12).map(|x| x as f32).collect();
+    let d3_tensor = Tensor::from_vec(d3_data, (3,2,2), &env_runtime.device).unwrap();
+
+    // Basic GETs operations
     println!("dim2 tensor to vec: {:?}", d2_tensor.to_vec2::<f32>().unwrap());
     println!("dim 2 shape: {:?}", d2_tensor.get(0));
     println!("get dim 0 index 0: {:?}", d2_tensor.get_on_dim(0, 0).unwrap());
     println!("get dim 0 index 0 first element: {:?}", d2_tensor.get_on_dim(0, 0).unwrap().get(0).unwrap());
     println!("get dim 1 index 0: {:?}", d2_tensor.get_on_dim(1, 0).unwrap());
     println!("get dim 0 index 0 first element: {:?}", d2_tensor.get_on_dim(1, 0).unwrap().get(0).unwrap());
-
+    let d3tod2 = d3_tensor.get_on_dim(1, d3_tensor.dims3().unwrap().1 -1).unwrap();
+    println!("Tensor3d 3x2x2 to 3x2: {:?}", d3tod2.to_vec2::<f32>());
+    println!("Tensor3d 3x2x2 to 3x2: {:?}", d3tod2.shape());
     /* i operator: Return a slice given an index.
+
       Given a 3x4 Tensor:
     - if the index is a scalar, it will return the row[index] Ej: i=0 -> [1.0, 2.0]
     - if the index is a tuple, it will return the row[column[index]] Ej: i=(0,0) -> 1.0
@@ -47,8 +55,7 @@ fn main(){
     - if the index is a 3-tuple, it will reutn the matrix[row[column[index]]] Ej: i=(0,0,0) -> 1.0
     */
     let d3_data: Vec<f32> = (1..=12).map(|x| x as f32).collect();
-    //println!("Tensord 3d data: {:?}", d3_data);
-    let d3_tensor = Tensor::from_vec(d3_data, (3,2,2), &env_runtime.device).unwrap();
+    println!("Tensord 3d data: {:?}", d3_data);
 
     let d3i = d3_tensor.i((0,1,0)).unwrap();
     //println!("Tensor3d i op: {:?}", d3i.to_vec0::<f32>());

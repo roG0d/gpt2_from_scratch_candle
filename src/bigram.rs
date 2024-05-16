@@ -47,14 +47,14 @@ impl Bigram {
 
         // Logits and targets needs to be reshaped so it corresponds cross_entropy function https://github.com/huggingface/candle/blob/72110091790da645febcd03fbc044968310de73f/candle-nn/src/loss.rs#L30
         let shape = logits.shape().dims();
-        let logits = logits.reshape(&[shape[0]*shape[1], shape[2]]).unwrap(); // Dimension = (B*T, C)
+        let reshaped_logits = logits.reshape(&[shape[0]*shape[1], shape[2]]).unwrap(); // Dimension = (B*T, C)
         let loss;
 
         // Optional targets inside Some()
         if let Some(targets) = targets{
             let targets = targets.reshape(&shape[0]*shape[1]).unwrap(); // Dimension = (B*T)
             
-            loss = cross_entropy(&logits, &targets).unwrap();
+            loss = cross_entropy(&reshaped_logits, &targets).unwrap();
             
         }else{
             loss = Tensor::zeros((1,1), DType::F32, &self.env_runtime.device).unwrap();
@@ -64,16 +64,13 @@ impl Bigram {
 
     pub fn generate(&self, mut idx: Tensor, max_new_tokens: usize)-> candle_core::Result<Tensor>{
 
-        for i in 0.. max_new_tokens{
-            let (logits, _) = self.forward(&idx, None); // (B*T,C)
-            if self.env_runtime.debug {println!("logits shape: {:?}",logits.shape());}
+        for _ in 0.. max_new_tokens{
+            let (logits, _) = self.forward(&idx, None); // (B,T,C)
+            
+            // equivalent to python code: logits = logits[:, -1, :]
+            let logits_reshape = logits.get_on_dim(1, logits.dims3().unwrap().1 -1).unwrap(); // (B,C)
 
-            // Logits is already (B, C) wtf karpathy https://youtu.be/kCc8FmEb1nY?t=1826 CAREFUL
-            //let slice = 
-            //let array_logits = slice.slice(s![.., -1, ..]).to_owned();
-            //let array_logits = logits.i(index)
-
-            let probs = softmax(&logits, 1).unwrap();
+            let probs = softmax(&logits_reshape, 1).unwrap();
             let idx_next = sample_multinomial2d(probs, &self.env_runtime.device).unwrap();
             idx = Tensor::cat(&[&idx,&idx_next],1).unwrap();
         }
